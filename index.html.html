@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fables Baby — a small brain, wired to think</title>
+<style>
+  :root{
+    --bg:#070a0f; --ink:#e7ecf5; --dim:#8a93a8; --teal:#4fd1c5;
+    --amber:#f2b84b; --purple:#c084fc; --red:#e6636b; --line:#182636;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font-family:ui-monospace,Menlo,Consolas,monospace;overflow:hidden}
+  canvas#stage{display:block;position:fixed;inset:0}
+  video{display:none}
+  .panel{position:absolute;background:rgba(7,10,15,.82);border:1px solid var(--line);
+         border-radius:8px;padding:9px 12px;line-height:1.5;font-size:12px;
+         backdrop-filter:blur(3px);z-index:5}
+  #hud{top:12px;left:12px;min-width:186px}
+  #ctl{top:12px;right:12px;width:212px}
+  #mind{bottom:12px;left:50%;transform:translateX(-50%);text-align:center;
+        border-color:#2a3550;padding:7px 18px}
+  h1{font-size:13px;margin:0 0 5px;color:var(--teal);letter-spacing:1.5px}
+  .k{color:var(--dim)} .v{color:var(--ink)}
+  .teal{color:var(--teal)} .amber{color:var(--amber)} .purple{color:var(--purple)}
+  .red{color:var(--red)} .dim{color:var(--dim)}
+  label{display:block;margin:8px 0 2px;color:var(--dim);font-size:11px}
+  input[type=range]{width:100%;accent-color:var(--teal);cursor:pointer;margin:0}
+  button{background:#0c1521;color:var(--teal);border:1px solid #234a56;border-radius:5px;
+         padding:6px 9px;margin:3px 2px 0 0;cursor:pointer;font-family:inherit;font-size:11px}
+  button:hover{border-color:var(--teal)}
+  button.on{background:var(--teal);color:#04211d}
+  #big{font-size:15px}
+  #wake{position:fixed;inset:0;z-index:20;background:rgba(7,10,15,.95);
+        display:flex;flex-direction:column;align-items:center;justify-content:center;
+        gap:14px;text-align:center;padding:24px}
+  #wake h1{font-size:26px;margin-bottom:2px}
+  #wake p{max-width:600px;color:var(--dim);line-height:1.65;font-size:13px;margin:0}
+  #wake .b{color:var(--ink)}
+  .wbtn{font-size:14px;padding:11px 18px;margin:4px}
+  @media(max-width:720px){#ctl{width:172px} #hud{font-size:11px}}
+</style>
+</head>
+<body>
+
+<div id="wake">
+  <h1>FABLES BABY</h1>
+  <p><span class="b">A small brain, wired to think.</span> It has a <span class="teal">cochlea</span>
+  — a bank of resonators that grow ears for what it hears. It has a <span class="teal">retina</span>
+  that feels light and motion. Both senses meet at <span class="amber">one trunk</span> — the world
+  never touches the rest of the net directly. From there a <span class="purple">frontal-lobe fractal</span>
+  grows and does the thinking: the signal propagates outward through dendrites, each with its own
+  delay, then folds back on itself, and at every fork two branches <span class="red">interfere (XOR)</span>.
+  What it hears sets the rhythm of its <span class="amber">brainstem carrier</span>; where that rhythm
+  and the sensory echo coincide, a <span class="purple">memory loop</span> latches. We see all of it.</p>
+  <div>
+    <button class="wbtn on" id="wMicCam">👁 &nbsp;WAKE — mic + camera</button>
+    <button class="wbtn" id="wMic">👂 &nbsp;mic only</button>
+    <button class="wbtn" id="wDream">🌙 &nbsp;let it dream (no mic/cam)</button>
+  </div>
+  <p class="dim" style="font-size:11px;max-width:560px">
+  Nothing here is trained. Structure is grown, and the FFT is used only to decide <i>where</i> to
+  place the next ear. Everything visible: frequencies, phases, the lineage tree, the interference.
+  <span style="color:var(--teal)">Do not hype. Do not lie. Just show.</span></p>
+</div>
+
+<div id="hud" class="panel">
+  <h1>FABLES BABY</h1>
+  <div><span class="k">cortex nodes</span> <span class="v" id="hN">1</span></div>
+  <div><span class="k">cochlea ears</span> <span class="v teal" id="hE">0</span></div>
+  <div><span class="k">interfering (XOR)</span> <span class="v red" id="hX">0</span></div>
+  <div><span class="k">TRT active</span> <span class="v teal" id="hT">0</span></div>
+  <div><span class="k">memory loops</span> <span class="v purple" id="hM">0</span></div>
+  <div style="margin-top:5px"><span class="k">hears</span> <span class="v amber" id="hF">—</span>
+       <span class="k">→ brainstem</span> <span class="v amber" id="hB">—</span></div>
+  <div><span class="k">arousal</span> <span class="v" id="hA">0.00</span></div>
+</div>
+
+<div id="ctl" class="panel">
+  <h1 style="color:var(--dim)">WIRING</h1>
+  <label>brainstem carrier <span class="amber" id="lBs">0.9</span></label>
+  <input type="range" id="sBs" min="0" max="2" step="0.05" value="0.9">
+  <label>growth drive <span class="amber" id="lGr">14</span></label>
+  <input type="range" id="sGr" min="0" max="40" step="1" value="14">
+  <label>TRT delay τ <span class="amber" id="lTau">4</span></label>
+  <input type="range" id="sTau" min="1" max="15" step="1" value="4">
+  <div style="margin-top:4px">
+    <button id="bMem" class="on">memory</button>
+    <button id="bHear">hear its mind</button>
+    <button id="bReset">reset</button>
+  </div>
+</div>
+
+<div id="mind" class="panel"><span class="dim">state of mind:</span> <span id="mState" class="teal">waking…</span></div>
+
+<video id="vid" autoplay playsinline muted></video>
+<canvas id="stage"></canvas>
+
+<script>
+"use strict";
+const TAU2 = Math.PI*2;
+const clamp=(x,a,b)=>x<a?a:x>b?b:x;
+const lerp=(a,b,t)=>a+(b-a)*t;
+
+// ======================================================================
+//  LOGIC PRIMITIVE — phasor resonator gate (verbatim from the lineage)
+// ======================================================================
+const GATE={ XOR:{w:[1,1],bias:0,lo:-0.1,hi:1.0} };
+const encodeBit=b=>b===0?{re:1,im:0}:{re:-1,im:0};
+function resonatorCompute(kind,inputs){
+  const c=GATE[kind]||GATE.XOR; let re=c.bias,im=0;
+  inputs.forEach((bit,i)=>{const p=encodeBit(bit); re+=c.w[i]*p.re; im+=c.w[i]*p.im;});
+  const amp=Math.hypot(re,im);
+  return {amp, fired:(amp>=c.lo&&amp<=c.hi)?1:0};   // fired ⇔ inputs differ (XOR)
+}
+
+// ======================================================================
+//  COCHLEA — Stuart–Landau resonators, surprise-gated ear growth (Entrain)
+// ======================================================================
+let ac=null, analyser=null, sp=null, inBus=null, freqData=null, binHz=0;
+const A_FMIN=70, A_FMAX=2500, A_MAXEARS=16, A_GUARD=0.06;
+let ears=[];                                     // {f,re,im,amp,silent,flash}
+let aGate=0; const A_GAIN=4.0, A_LEAK=1.15, A_TRIP=5.0; let aRefr=0;
+let cochlearDrive=0, fDom=220, hearMind=false, proceduralMode=false;
+
+function addEar(f){ ears.push({f,re:1e-3,im:0,amp:0,silent:0,flash:1}); }
+function earDist(f){ let d=9; for(const e of ears) d=Math.min(d,Math.abs(Math.log2(e.f/f))); return d; }
+
+// audio-thread integration of the ears (exact rotation + decay; no Euler trap)
+function audioTick(ev){
+  const inp=ev.inputBuffer.getChannelData(0), out=ev.outputBuffer.getChannelData(0);
+  const dt=1/ac.sampleRate, N=inp.length, M=ears.length, mu=-0.6, B=2.4;
+  const cth=new Float64Array(M), sth=new Float64Array(M);
+  for(let k=0;k<M;k++){const th=TAU2*ears[k].f*dt; cth[k]=Math.cos(th); sth[k]=Math.sin(th);}
+  for(let i=0;i<N;i++){
+    const s=inp[i]*B; let mix=0;
+    for(let k=0;k<M;k++){const e=ears[k];
+      const r2=e.re*e.re+e.im*e.im, g=Math.exp((mu-r2)*dt);
+      const re=(e.re*cth[k]-e.im*sth[k])*g, im=(e.re*sth[k]+e.im*cth[k])*g;
+      e.re=re+dt*s; e.im=im; mix+=e.re;
+    }
+    out[i]= hearMind? Math.tanh(mix*1.3):0;
+  }
+  let mx=0, mf=fDom;
+  for(let k=0;k<M;k++){const e=ears[k]; const a=Math.hypot(e.re,e.im);
+    e.amp=0.9*e.amp+0.1*a; if(e.amp>mx){mx=e.amp; mf=e.f;}}
+  cochlearDrive=Math.tanh(mx*1.5); fDom=mf;
+}
+
+function cochleaGrow(dtF){
+  if(!analyser){ return; }
+  analyser.getFloatFrequencyData(freqData);
+  const i0=Math.max(1,Math.floor(A_FMIN/binHz)), i1=Math.min(freqData.length-2,Math.ceil(A_FMAX/binHz));
+  const seg=[]; for(let i=i0;i<=i1;i+=3) seg.push(freqData[i]); seg.sort((a,b)=>a-b);
+  const floor=Math.max(-72, seg[seg.length>>1]+9);
+  let peaks=[];
+  for(let i=i0+1;i<i1;i++){const v=freqData[i];
+    if(v>floor && v>freqData[i-1] && v>=freqData[i+1]){
+      const a=freqData[i-1],b=v,c=freqData[i+1];
+      let d=0.5*(a-c)/(a-2*b+c+1e-12); if(!isFinite(d))d=0; d=clamp(d,-0.5,0.5);
+      peaks.push({f:(i+d)*binHz, p:Math.pow(10,v/10)}); i+=2;
+    }
+  }
+  peaks.sort((a,b)=>b.p-a.p); peaks=peaks.slice(0,8);
+  const total=peaks.reduce((s,q)=>s+q.p,0);
+  let unexpl=0; for(const q of peaks) if(earDist(q.f)>A_GUARD) unexpl+=q.p;
+  const drv= total>1e-7? unexpl/total : 0;
+  aGate=clamp(aGate + A_GAIN*drv*dtF - A_LEAK*dtF, 0, A_TRIP*1.2);
+  if(aRefr>0) aRefr-=dtF;
+  else if(aGate>A_TRIP && ears.length<A_MAXEARS){
+    const tgt=peaks.find(q=>earDist(q.f)>A_GUARD);
+    if(tgt){ addEar(tgt.f); aGate=0; aRefr=0.6; }
+    else aGate=A_TRIP*0.8;
+  }
+  for(let k=ears.length-1;k>=0;k--){const e=ears[k];
+    e.silent=e.amp<0.02? e.silent+dtF:0;
+    if(e.silent>11 && ears.length>1) ears.splice(k,1);
+  }
+}
+
+// ======================================================================
+//  RETINA — video luminance + motion (feeds the trunk only)
+// ======================================================================
+const vid=document.getElementById('vid');
+const roff=document.createElement('canvas'); roff.width=64; roff.height=48;
+const rctx=roff.getContext('2d',{willReadFrequently:true});
+let prevLum=null, visualDrive=0, RG=8, retGrid=new Float32Array(RG*RG);
+
+function retinaTick(){
+  if(proceduralMode || !vid || vid.readyState<2){ visualDrive*=0.95; return; }
+  rctx.drawImage(vid,0,0,64,48);
+  const d=rctx.getImageData(0,0,64,48).data, lum=new Float32Array(64*48);
+  for(let i=0;i<lum.length;i++) lum[i]=(0.299*d[i*4]+0.587*d[i*4+1]+0.114*d[i*4+2])/255;
+  for(let gy=0;gy<RG;gy++)for(let gx=0;gx<RG;gx++){
+    let acc=0,c=0;
+    const x0=(gx*64/RG)|0,x1=((gx+1)*64/RG)|0,y0=(gy*48/RG)|0,y1=((gy+1)*48/RG)|0;
+    for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++){acc+=lum[y*64+x];c++;}
+    retGrid[gy*RG+gx]=acc/Math.max(1,c);
+  }
+  let motion=0; if(prevLum){for(let i=0;i<lum.length;i++)motion+=Math.abs(lum[i]-prevLum[i]); motion/=lum.length;}
+  prevLum=lum;
+  const target=clamp(motion*14, 0, 1);
+  visualDrive = 0.6*visualDrive + 0.4*target;
+}
+
+// ======================================================================
+//  FRONTAL-LOBE FRACTAL — grows, and thinks by dendritic-delay interference
+// ======================================================================
+const RLEN=16, HLEN=48, B_MAX=1600;
+let brain=[], gTime=0, memoryOn=true;
+let bsPhase=0, arousal=0, drive=0;
+let outHist=[], driveHist=[], MAXOUT=440;
+let xCount=0, trtCount=0, memCount=0;
+let trunkX=0, trunkY=0, BRX0=0,BRX1=0,BRY0=0,BRY1=0;
+
+function mkNode(x,y,parent){
+  const depth=parent?parent.depth+1:0;
+  return {x,y,parent:parent||null,children:[],depth,
+    td:0,up:0,mem:0,logic:parent?'none':'root',flash:parent?1:0,silent:0,born:gTime,
+    delay:Math.max(1,Math.min(12,Math.round(1+depth*0.4+Math.random()*3))),
+    tdRing:new Float32Array(RLEN),tdHi:0, upRing:new Float32Array(HLEN),upHi:0};
+}
+function brainReset(){ brain=[ mkNode(trunkX,trunkY,null) ]; outHist=[]; driveHist=[]; }
+
+function brainGrow(attempts){
+  for(let a=0;a<attempts;a++){
+    if(brain.length>=B_MAX) return;
+    const tx=BRX0+Math.random()*(BRX1-BRX0), ty=BRY0+Math.random()*(BRY1-BRY0);
+    let near=null,md=1e9;
+    for(let j=0;j<brain.length;j++){const n=brain[j];const dx=tx-n.x,dy=ty-n.y;const d=dx*dx+dy*dy; if(d<md){md=d;near=n;}}
+    md=Math.sqrt(md);
+    if(near && md>6 && md<120){
+      const ang=Math.atan2(ty-near.y,tx-near.x), dist=7+Math.random()*7;
+      const nn=mkNode(near.x+Math.cos(ang)*dist, near.y+Math.sin(ang)*dist, near);
+      near.children.push(nn); brain.push(nn);
+    }
+  }
+}
+function brainPrune(dtF){
+  for(let i=brain.length-1;i>=1;i--){
+    const n=brain[i];
+    n.silent = Math.abs(n.up)<0.02? n.silent+dtF : 0;
+    if(n.children.length===0 && n.silent>8 && gTime-n.born>5 && brain.length>B_MAX*0.72){
+      const p=n.parent; if(p){const k=p.children.indexOf(n); if(k>=0)p.children.splice(k,1);}
+      brain.splice(i,1);
+    }
+  }
+}
+
+// the thinking: world enters at the trunk, propagates out with per-dendrite delay,
+// folds back, XOR-interferes at every branch, extracts TRT, latches memory on coincidence
+function brainThink(dtF, tau){
+  gTime+=dtF;
+  const root=brain[0];
+  // --- top-down: only the trunk sees the world ---
+  root.td=drive; root.tdRing[root.tdHi]=root.td; root.tdHi=(root.tdHi+1)%RLEN;
+  for(let i=1;i<brain.length;i++){
+    const n=brain[i], p=n.parent;
+    const pd=p.tdRing[(p.tdHi-1-n.delay+RLEN*4)%RLEN];   // dendritic delay line
+    n.td=pd*0.97; n.tdRing[n.tdHi]=n.td; n.tdHi=(n.tdHi+1)%RLEN;
+  }
+  // --- bottom-up: reflect, then interfere at forks ---
+  xCount=0; trtCount=0; memCount=0;
+  for(let i=brain.length-1;i>=0;i--){
+    const n=brain[i], kids=n.children;
+    if(kids.length===0)        n.up=n.td;                         // leaf reflects its shaped drive
+    else if(kids.length===1)   n.up=kids[0].up*0.95;              // pass-through
+    else{ let v=kids[0].up; for(let c=1;c<kids.length;c++) v=Math.abs(v-kids[c].up); n.up=v*0.95; } // XOR fold
+    if(memoryOn) n.up+=n.mem*0.12;
+    n.upRing[n.upHi]=n.up; n.upHi=(n.upHi+1)%HLEN;
+    // TRT invariant across delay τ  (second difference: |x_t − 2x_{t−τ} + x_{t−2τ}|)
+    const x0=n.upRing[(n.upHi-1+HLEN*4)%HLEN],
+          x1=n.upRing[(n.upHi-1-tau+HLEN*4)%HLEN],
+          x2=n.upRing[(n.upHi-1-2*tau+HLEN*4)%HLEN];
+    const trt=Math.abs(x0-2*x1+x2);
+    // XOR ALU: sensory-echo (TRT) against brainstem carrier
+    const sBit=trt>0.02?1:0, bBit=Math.abs(n.td)>0.10?1:0;
+    const alu=resonatorCompute('XOR',[sBit,bBit]);
+    if(n.logic!=='root'){
+      if(alu.fired){ n.logic='destructive'; xCount++; }               // they differ → cancellation
+      else if(trt>0.02){ n.logic='trt'; trtCount++;                    // coincidence → resonance + memory
+        if(memoryOn) n.mem=(n.mem+alu.amp*0.2)*0.92; }
+      else { n.logic='constructive'; n.mem*=0.9; }
+    }
+    if(Math.abs(n.mem)>0.15) memCount++;
+  }
+  outHist.push(root.up); driveHist.push(drive);
+  if(outHist.length>MAXOUT){ outHist.shift(); driveHist.shift(); }
+}
+
+// ======================================================================
+//  RENDER
+// ======================================================================
+const cv=document.getElementById('stage'), ctx=cv.getContext('2d');
+let W,H, cochX,cochY,cochR, retX,retY,retS, stripY;
+function layout(){
+  W=cv.width=innerWidth; H=cv.height=innerHeight;
+  trunkX=W*0.5; trunkY=H*0.70;
+  BRX0=W*0.09; BRX1=W*0.91; BRY0=H*0.05; BRY1=H*0.70;
+  cochX=W*0.30; cochY=H*0.80; cochR=Math.min(W,H)*0.075;
+  retX=W*0.70;  retY=H*0.80;  retS=Math.min(W,H)*0.11;
+  stripY=H*0.87;
+}
+addEventListener('resize',()=>{const had=brain.length; layout(); if(had){brain[0].x=trunkX;brain[0].y=trunkY;}});
+layout();
+
+function draw(fbsHz){
+  ctx.fillStyle='#070a0f'; ctx.fillRect(0,0,W,H);
+
+  // ---- feeder lines: senses → trunk (only path the world takes in) ----
+  drawFeeder(cochX,cochY,trunkX,trunkY, cochlearDrive, '#4fd1c5');
+  drawFeeder(retX,retY,trunkX,trunkY, visualDrive, '#4fd1c5');
+
+  // ---- brain edges ----
+  ctx.lineWidth=1;
+  ctx.strokeStyle='rgba(79,209,197,.16)'; ctx.beginPath();
+  for(let i=1;i<brain.length;i++){const n=brain[i]; ctx.moveTo(n.x,n.y); ctx.lineTo(n.parent.x,n.parent.y);}
+  ctx.stroke();
+  // active edges (carry a live signal) highlighted
+  ctx.strokeStyle='rgba(192,132,252,.22)'; ctx.beginPath();
+  for(let i=1;i<brain.length;i++){const n=brain[i]; if(Math.abs(n.up)>0.25){ctx.moveTo(n.x,n.y); ctx.lineTo(n.parent.x,n.parent.y);}}
+  ctx.stroke();
+
+  // ---- brain nodes ----
+  for(let i=0;i<brain.length;i++){
+    const n=brain[i];
+    if(n.flash>0){ ctx.strokeStyle=`rgba(192,132,252,${n.flash*.5})`;
+      ctx.beginPath(); ctx.arc(n.x,n.y,3+14*(1-n.flash),0,TAU2); ctx.stroke(); n.flash-=0.03; }
+    if(n.logic==='root') continue;
+    let col,r=1.4;
+    if(n.logic==='destructive'){ col='rgba(230,99,107,.85)'; r=1.7; }
+    else if(n.logic==='trt'){ col='rgba(192,132,252,'+(0.5+0.5*Math.min(1,Math.abs(n.mem)*2))+')'; r=2.1; }
+    else if(Math.abs(n.up)>0.06){ const a=Math.min(1,Math.abs(n.up)*1.2); col=`rgba(79,209,197,${0.3+0.6*a})`; r=1.4+1.4*a; }
+    else col='rgba(90,110,130,.35)';
+    ctx.fillStyle=col; ctx.fillRect(n.x-r,n.y-r,r*2,r*2);
+  }
+  // ---- trunk / brainstem heartbeat ----
+  const beat=Math.abs(Math.sin(bsPhase))*(0.3+0.7*arousal);
+  ctx.strokeStyle=`rgba(242,184,75,${0.25+0.5*beat})`; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(trunkX,trunkY,10+16*beat,0,TAU2); ctx.stroke();
+  ctx.fillStyle='#f2b84b'; ctx.beginPath(); ctx.arc(trunkX,trunkY,6+3*beat,0,TAU2); ctx.fill();
+  ctx.fillStyle='rgba(138,147,168,.7)'; ctx.font='10px monospace';
+  ctx.textAlign='center'; ctx.fillText('trunk · brainstem',trunkX,trunkY+26);
+
+  drawCochlea(); drawRetina(); drawThought(document.getElementById('sTau').value|0);
+  ctx.textAlign='left';
+}
+
+function drawFeeder(x0,y0,x1,y1,drv,base){
+  const a=0.12+0.55*clamp(drv,0,1);
+  ctx.strokeStyle=`rgba(79,209,197,${a})`; ctx.lineWidth=1+2.2*clamp(drv,0,1);
+  ctx.beginPath(); ctx.moveTo(x0,y0);
+  ctx.quadraticCurveTo((x0+x1)/2, (y0+y1)/2 - 30, x1,y1); ctx.stroke();
+  // travelling pulse
+  const t=(gTime*0.8)%1, px=lerp(x0,x1,t), py=lerp(y0,y1,t)-30*4*t*(1-t);
+  ctx.fillStyle=`rgba(242,184,75,${a})`; ctx.beginPath(); ctx.arc(px,py,2+3*clamp(drv,0,1),0,TAU2); ctx.fill();
+  ctx.lineWidth=1;
+}
+
+function drawCochlea(){
+  ctx.fillStyle='rgba(138,147,168,.7)'; ctx.font='10px monospace'; ctx.textAlign='center';
+  ctx.fillText('cochlea',cochX,cochY+cochR+16);
+  // outer coil
+  ctx.strokeStyle='rgba(79,209,197,.18)'; ctx.lineWidth=1; ctx.beginPath();
+  for(let a=0;a<=TAU2*2.4;a+=0.15){const rr=cochR*(0.25+a/(TAU2*2.4)*0.85);
+    const x=cochX+Math.cos(a)*rr,y=cochY+Math.sin(a)*rr; a===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+  ctx.stroke();
+  ears.forEach((e,i)=>{
+    const fr=clamp(Math.log2(e.f/A_FMIN)/Math.log2(A_FMAX/A_FMIN),0,1);
+    const ang=i*2.399963, rr=cochR*(0.3+0.75*fr);
+    const x=cochX+Math.cos(ang)*rr, y=cochY+Math.sin(ang)*rr;
+    if(e.flash>0){ ctx.strokeStyle=`rgba(242,184,75,${e.flash})`;
+      ctx.beginPath(); ctx.arc(x,y,3+10*(1-e.flash),0,TAU2); ctx.stroke(); e.flash-=0.03; }
+    const amp=Math.min(1,e.amp*1.6), R=2+8*amp;
+    ctx.fillStyle=`rgba(79,209,197,${0.3+0.6*amp})`;
+    if(amp>0.3){ctx.shadowColor='#4fd1c5';ctx.shadowBlur=12*amp;}
+    ctx.beginPath(); ctx.arc(x,y,R,0,TAU2); ctx.fill(); ctx.shadowBlur=0;
+    ctx.fillStyle='rgba(138,147,168,.6)'; ctx.font='8px monospace';
+    ctx.fillText(e.f.toFixed(0),x,y-R-2);
+  });
+  if(ears.length===0){ ctx.fillStyle='rgba(138,147,168,.4)'; ctx.font='9px monospace';
+    ctx.fillText('listening…',cochX,cochY); }
+}
+
+function drawRetina(){
+  ctx.fillStyle='rgba(138,147,168,.7)'; ctx.font='10px monospace'; ctx.textAlign='center';
+  ctx.fillText('retina',retX,retY+retS*0.62+14);
+  const s=retS, x0=retX-s/2, y0=retY-s/2, cell=s/RG;
+  for(let gy=0;gy<RG;gy++)for(let gx=0;gx<RG;gx++){
+    const l=retGrid[gy*RG+gx]||0;
+    ctx.fillStyle=`rgba(79,209,197,${0.08+0.75*l})`;
+    ctx.fillRect(x0+gx*cell+0.5, y0+gy*cell+0.5, cell-1, cell-1);
+  }
+  ctx.strokeStyle=`rgba(242,184,75,${0.2+0.6*clamp(visualDrive,0,1)})`;
+  ctx.lineWidth=1+2*clamp(visualDrive,0,1);
+  ctx.strokeRect(x0-2,y0-2,s+4,s+4); ctx.lineWidth=1;
+  if(proceduralMode||!vid||vid.readyState<2){ctx.fillStyle='rgba(138,147,168,.4)';ctx.font='9px monospace';
+    ctx.fillText(proceduralMode?'dreaming':'no camera',retX,retY);}
+}
+
+function drawThought(tau){
+  const y0=stripY, hh=H-stripY, mid=y0+hh*0.5, splitX=W*0.66;
+  ctx.strokeStyle='rgba(24,38,54,.9)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(0,y0); ctx.lineTo(W,y0); ctx.moveTo(splitX,y0); ctx.lineTo(splitX,H); ctx.stroke();
+  ctx.fillStyle='rgba(138,147,168,.55)'; ctx.font='10px monospace'; ctx.textAlign='left';
+  ctx.fillText('the thought  ·  amber = world at the trunk   teal = root tensor (what it thinks)',8,y0+13);
+  ctx.fillText('TRT attractor',splitX+8,y0+13);
+  const n=outHist.length, step=splitX/MAXOUT;
+  // world drive
+  ctx.strokeStyle='rgba(242,184,75,.45)'; ctx.beginPath();
+  for(let i=0;i<n;i++){const x=i*step, yy=mid-(driveHist[i]||0)*hh*0.32; i?ctx.lineTo(x,yy):ctx.moveTo(x,yy);}
+  ctx.stroke();
+  // root tensor
+  ctx.strokeStyle='#4fd1c5'; ctx.lineWidth=1.5; ctx.beginPath();
+  for(let i=0;i<n;i++){const x=i*step, yy=mid-(outHist[i]||0)*hh*0.42; i?ctx.lineTo(x,yy):ctx.moveTo(x,yy);}
+  ctx.stroke(); ctx.lineWidth=1;
+  // attractor  x_t vs x_{t-τ}
+  const aS=Math.min(W-splitX,hh)*0.42, cx=splitX+(W-splitX)/2, cy=mid+hh*0.02;
+  ctx.strokeStyle='rgba(192,132,252,.8)'; ctx.beginPath();
+  for(let i=tau;i<n;i++){const px=cx+outHist[i]*aS, py=cy-outHist[i-tau]*aS; i===tau?ctx.moveTo(px,py):ctx.lineTo(px,py);}
+  ctx.stroke();
+  if(n>tau){ctx.fillStyle='#fff'; ctx.beginPath();
+    ctx.arc(cx+outHist[n-1]*aS, cy-outHist[n-1-tau]*aS,2.5,0,TAU2); ctx.fill();}
+}
+
+// ======================================================================
+//  MAIN LOOP
+// ======================================================================
+let last=performance.now();
+function proceduralSenses(){
+  const t=gTime;
+  cochlearDrive = 0.5*Math.abs(Math.sin(t*1.7)*Math.sin(t*0.31)) + 0.15;
+  fDom = 180+120*Math.sin(t*0.2);
+  visualDrive = Math.abs(Math.sin(t*0.9)*Math.cos(t*0.21));
+}
+
+function loop(){
+  const now=performance.now(); let dtF=(now-last)/1000; last=now; dtF=Math.min(0.05,dtF);
+  const tau=document.getElementById('sTau').value|0;
+  const bsAmp=parseFloat(document.getElementById('sBs').value);
+  const growR=parseFloat(document.getElementById('sGr').value);
+
+  if(proceduralMode) proceduralSenses(); else { cochleaGrow(dtF); retinaTick(); }
+
+  // fuse senses at the trunk
+  const sensory=clamp(0.65*cochlearDrive + 0.55*visualDrive, 0, 1);
+  arousal = arousal*0.94 + sensory*0.06;
+  // brainstem entrains to what it hears
+  const fbsHz = 1.5 + 5.5*clamp(Math.log2(fDom/70)/Math.log2(2000/70),0,1);
+  bsPhase += TAU2*fbsHz*dtF;
+  drive = bsAmp*Math.sin(bsPhase)*(0.2+arousal) + 0.85*sensory;
+
+  brainThink(dtF, tau);
+  if(arousal>0.03) brainGrow(Math.min(48, Math.floor(growR*arousal*1.6)+ (arousal>0.4?1:0)));
+  brainPrune(dtF);
+
+  draw(fbsHz);
+
+  // HUD
+  set('hN',brain.length); set('hE',ears.length); set('hX',xCount);
+  set('hT',trtCount); set('hM',memCount);
+  set('hF', proceduralMode? 'dream':(fDom.toFixed(0)+' Hz'));
+  set('hB', fbsHz.toFixed(1)+' Hz'); set('hA',arousal.toFixed(2));
+  const st = arousal<0.05?['asleep','dim']:arousal<0.14?['drowsy','amber']
+            :arousal<0.4?['awake','teal']:['alert','purple'];
+  const m=document.getElementById('mState'); m.textContent=st[0]; m.className=st[1];
+  requestAnimationFrame(loop);
+}
+const set=(id,v)=>{document.getElementById(id).textContent=v;};
+
+// ======================================================================
+//  WAKE / AUDIO SETUP
+// ======================================================================
+async function startAudio(){
+  ac=new (window.AudioContext||window.webkitAudioContext)();
+  inBus=ac.createGain(); analyser=ac.createAnalyser();
+  analyser.fftSize=8192; analyser.smoothingTimeConstant=0.55;
+  freqData=new Float32Array(analyser.frequencyBinCount); binHz=ac.sampleRate/8192;
+  sp=ac.createScriptProcessor(1024,1,1);
+  inBus.connect(analyser); inBus.connect(sp); sp.connect(ac.destination);
+  sp.onaudioprocess=audioTick;
+}
+async function wake(useMic,useCam){
+  try{
+    if(useMic){
+      await startAudio();
+      const ms=await navigator.mediaDevices.getUserMedia(
+        {audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}, video:useCam});
+      ac.createMediaStreamSource(ms).connect(inBus);
+      if(useCam){ const vs=new MediaStream(ms.getVideoTracks()); if(vs.getVideoTracks().length){vid.srcObject=ms; vid.play().catch(()=>{});} }
+    } else { proceduralMode=true; }
+  }catch(e){
+    if(useMic && !ac){ proceduralMode=true; }        // mic denied → dream
+    else if(useCam){ /* cam denied but mic ok: retina just idles */ }
+  }
+  document.getElementById('wake').style.display='none';
+  brainReset(); last=performance.now(); loop();
+}
+document.getElementById('wMicCam').onclick=()=>wake(true,true);
+document.getElementById('wMic').onclick   =()=>wake(true,false);
+document.getElementById('wDream').onclick =()=>wake(false,false);
+
+// ---- controls ----
+const bind=(s,l,f)=>{const el=document.getElementById(s); el.oninput=()=>document.getElementById(l).textContent=(f?f(el.value):el.value);};
+bind('sBs','lBs'); bind('sGr','lGr'); bind('sTau','lTau');
+document.getElementById('bMem').onclick=e=>{memoryOn=!memoryOn; e.target.classList.toggle('on',memoryOn);};
+document.getElementById('bHear').onclick=e=>{hearMind=!hearMind; e.target.classList.toggle('on',hearMind);};
+document.getElementById('bReset').onclick=()=>brainReset();
+</script>
+</body>
+</html>
